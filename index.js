@@ -47,7 +47,15 @@ function getBreweries() {
     return fetch('https://api.openbrewerydb.org/breweries').then(resp => resp.json()) // Promise<Breweries>
 }
 
-
+function updateBreweriesOnServer(brewerie) {
+    return fetch(`https://api.openbrewerydb.org/breweries/${brewerie.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(brewerie)
+    }).then(resp => resp.json())
+  }
 
 
 const h2El = document.createElement('h2')
