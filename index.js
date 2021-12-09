@@ -2,7 +2,7 @@
 const mainSection = document.querySelector('main')
 
 state = {
-
+    breweries =[]
 }
 
 /* <main>
@@ -42,6 +42,12 @@ mainSection.append(filterSection)
     // More checkboxes
   </form>
 </aside> */
+
+function getBreweries() {
+    return fetch('https://api.openbrewerydb.org/breweries').then(resp => resp.json()) // Promise<Breweries>
+}
+
+
 
 
 const h2El = document.createElement('h2')
@@ -118,7 +124,7 @@ labelCincinnati.setAttribute('for', 'cincinnati')
 labelCincinnati.textContent = "Cincinnati"
 
 
-formCity.append(inputElChardon,labelChardon, inputElCincinnati,labelCincinnati)
+formCity.append(inputElChardon, labelChardon, inputElCincinnati, labelCincinnati)
 
 filterSection.append(h2El, formType, divEl, formCity)
 
