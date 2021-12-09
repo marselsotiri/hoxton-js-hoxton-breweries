@@ -49,8 +49,25 @@ mainSection.append(filterSection)
   </form>
 </aside> */
 
+
+
+
 function getBreweries() {
   return fetch('https://api.openbrewerydb.org/breweries').then(resp => resp.json()) // Promise<Breweries>
+}
+
+
+
+function getBreweriesToDisplay() {
+  let breweriesToDisplay = state.breweries
+
+  breweriesToDisplay = breweriesToDisplay.filter(brewery =>
+    state.breweryTypes.includes(brewery.brewery_type)
+  )
+
+  breweriesToDisplay = breweriesToDisplay.slice(0, 10)
+
+  return breweriesToDisplay
 }
 
 // function updateBreweriesOnServer(brewerie) {
@@ -66,6 +83,12 @@ function getBreweries() {
 
 function fetchBreweriesByState(state) {
   return fetch(`https://api.openbrewerydb.org/breweries?by_state=${state}&per_page=50`).then(resp =>
+    resp.json()
+  )
+}
+
+function fetchBreweriesByType(bytype) {
+  return fetch(`https://api.openbrewerydb.org/breweries?by_type=${bytype}`).then(resp =>
     resp.json()
   )
 }
@@ -122,19 +145,19 @@ function renderFilterSection() {
   optionSelect.setAttribute('value', ' ')
   optionSelect.textContent = "Select a type..."
 
-  const optionMicro = document.createElement('option')
-  optionMicro.setAttribute('value', 'micro')
-  optionMicro.textContent = "Micro"
+  for (const breweryType of state.breweryTypes) {
 
-  const optionRegional = document.createElement('option')
-  optionRegional.setAttribute('value', 'regional')
-  optionRegional.textContent = "Regional"
+    selectFilter.addEventListener("change", function () {
 
-  const optionBrewpub = document.createElement('option')
-  optionBrewpub.setAttribute('value', 'brewpub')
-  optionBrewpub.textContent = "Brewpub"
+    })
 
-  selectFilter.append(optionSelect, optionMicro, optionRegional, optionBrewpub)
+    const optionMicro = document.createElement('option')
+    optionMicro.setAttribute('value', breweryType)
+    optionMicro.textContent = breweryType.toUpperCase()
+
+    selectFilter.append(optionSelect, optionMicro)
+
+  }
 
   const divEl = document.createElement('div')
   divEl.setAttribute('class', 'filter-by-city-heading')
@@ -159,6 +182,8 @@ function renderFilterSection() {
     inputElChardon.setAttribute('type', 'checkbox')
     inputElChardon.setAttribute('name', city)
     inputElChardon.setAttribute('value', city)
+    inputElChardon.setAttribute('id', city)
+
 
     const labelChardon = document.createElement('label')
     labelChardon.setAttribute('for', city)
@@ -204,6 +229,8 @@ function renderFilterSection() {
 </article> */
 
 function renderList() {
+
+
 
   const h1Breweries = document.createElement('h1')
   h1Breweries.textContent = "List of Breweries"
