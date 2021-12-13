@@ -1,6 +1,10 @@
 // Write your code here
 const mainSection = document.querySelector('main')
 const selectStateForm = document.querySelector('#select-state-form')
+const filterSection = document.querySelector('.filters-section')
+const ulEl = document.querySelector('.breweries-list')
+const searchForm = document.querySelector('#search-breweries-form')
+
 
 
 state = {
@@ -8,19 +12,9 @@ state = {
   selectedState: null,
   breweryTypes: ['micro', 'regional', 'brewpub'],
   selectedBreweryType: '',
-  selectedCities: []
+  selectedCities: [],
+  search: ''
 }
-
-/* <main>
-  <aside class="filters-section">
-    // Check filter-section.html
-  </aside>
-  // Check list-section.html
-</main> */
-
-const filterSection = document.createElement('aside')
-filterSection.setAttribute('class', 'filters-section')
-mainSection.append(filterSection)
 
 
 /* <aside class="filters-section">
@@ -87,8 +81,8 @@ function fetchBreweriesByState(state) {
   )
 }
 
-function fetchBreweriesByType(bytype) {
-  return fetch(`https://api.openbrewerydb.org/breweries?by_type=${bytype}`).then(resp =>
+function fetchBreweriesByType(bytype, state) {
+  return fetch(`https://api.openbrewerydb.org/breweries?by_type=${bytype}&by_state=${state}`).then(resp =>
     resp.json()
   )
 }
@@ -101,10 +95,26 @@ function listenToSelectStateForm() {
     fetchBreweriesByState(state.selectedState) // Promise<breweries>
       .then(function (breweries) {
         state.breweries = breweries
+        state.selectedCities = []
+        state.selectedBreweryType = ''
+        state.search = ''
         render()
       })
   })
 }
+
+function listenToSearchInput () {
+  searchForm.addEventListener('submit', function (event) {
+    event.preventDefault()
+
+    // update state
+    state.search = searchForm.search.value
+    // render
+    render()
+  })
+}
+
+
 
 function getCitiesFromBreweries(breweries) {
   let cities = []
@@ -118,6 +128,34 @@ function getCitiesFromBreweries(breweries) {
   return cities
 }
 
+
+function getBreweriesToDisplay() {
+  let breweriesToDisplay = state.breweries
+
+  breweriesToDisplay = breweriesToDisplay.filter(brewery =>
+    state.breweryTypes.includes(brewery.brewery_type)
+  )
+
+  if (state.selectedBreweryType !== '') {
+    breweriesToDisplay = breweriesToDisplay.filter(
+      brewery => brewery.brewery_type === state.selectedBreweryType
+    )
+  }
+
+  if (state.selectedCities.length > 0) {
+    breweriesToDisplay = breweriesToDisplay.filter(brewery =>
+      state.selectedCities.includes(brewery.city)
+    )
+  }
+
+  breweriesToDisplay = breweriesToDisplay.filter(brewery =>
+    brewery.name.toLowerCase().includes(state.search.toLowerCase())
+  )
+
+  breweriesToDisplay = breweriesToDisplay.slice(0, 10)
+
+  return breweriesToDisplay
+}
 
 function renderFilterSection() {
 
@@ -147,17 +185,25 @@ function renderFilterSection() {
 
   for (const breweryType of state.breweryTypes) {
 
-    selectFilter.addEventListener("change", function () {
-
-    })
-
     const optionMicro = document.createElement('option')
     optionMicro.setAttribute('value', breweryType)
     optionMicro.textContent = breweryType.toUpperCase()
 
     selectFilter.append(optionSelect, optionMicro)
 
+
   }
+
+  selectFilter.addEventListener("change", function () {
+    state.selectedBreweryType = selectFilter.value
+    fetchBreweriesByType(state.selectedBreweryType, state.selectedState)
+      .then(function (brewerys) {
+        state.breweries = brewerys
+        render()
+      })
+
+  })
+
 
   const divEl = document.createElement('div')
   divEl.setAttribute('class', 'filter-by-city-heading')
@@ -177,21 +223,32 @@ function renderFilterSection() {
 
   for (const city of cities) {
 
-    const inputElChardon = document.createElement('input')
-    inputElChardon.setAttribute('class', 'city-checkbox')
-    inputElChardon.setAttribute('type', 'checkbox')
-    inputElChardon.setAttribute('name', city)
-    inputElChardon.setAttribute('value', city)
-    inputElChardon.setAttribute('id', city)
+    const inputEl = document.createElement('input')
+    inputEl.setAttribute('class', 'city-checkbox')
+    inputEl.setAttribute('type', 'checkbox')
+    inputEl.setAttribute('name', city)
+    inputEl.setAttribute('value', city)
+    inputEl.setAttribute('id', city)
+
+    if (state.selectedCities.includes(city)) inputEl.checked = true
+
+    const label = document.createElement('label')
+    label.setAttribute('for', city)
+    label.textContent = city
+
+    inputEl.addEventListener('change', function () {
+
+      const cityCheckboxes = document.querySelectorAll('.city-checkbox')
+      let selectedCities = []
+      for (const checkbox of cityCheckboxes) {
+        if (checkbox.checked) selectedCities.push(checkbox.value)
+      }
+      state.selectedCities = selectedCities
+      render()
+    })
 
 
-    const labelChardon = document.createElement('label')
-    labelChardon.setAttribute('for', city)
-    labelChardon.textContent = city
-
-
-
-    formCity.append(inputElChardon, labelChardon)
+    formCity.append(inputEl, label)
   }
 
   filterSection.append(h2El, formType, divEl, formCity)
@@ -199,130 +256,79 @@ function renderFilterSection() {
 }
 
 
-/* <h1>List of Breweries</h1>
-<header class="search-bar">
-  <form id="search-breweries-form" autocomplete="off">
-    <label for="search-breweries"><h2>Search breweries:</h2></label>
-    <input id="search-breweries" name="search-breweries" type="text" />
-  </form>
-</header>
-<article>
-  <ul class="breweries-list">
-    <li>
-      <h2>Snow Belt Brew</h2>
-      <div class="type">micro</div>
-      <section class="address">
-        <h3>Address:</h3>
-        <p>9511 Kile Rd</p>
-        <p><strong>Chardon, 44024</strong></p>
-      </section>
-      <section class="phone">
-        <h3>Phone:</h3>
-        <p>N/A</p>
-      </section>
-      <section class="link">
-        <a href="null" target="_blank">Visit Website</a>
-      </section>
-    </li>
-    // More list elements
-  </ul>
-</article> */
+// function renderSearchInput() {
+//   searchForm.search.value = state.search
+// }
+
 
 function renderList() {
 
+  ulEl.innerHTML = ''
+
+  const breweriesToDisplay = getBreweriesToDisplay()
+
+  for (const brewery of breweriesToDisplay) {
+
+    const liElement = document.createElement('li')
+
+    const h2Element = document.createElement('h2')
+    h2Element.textContent = brewery.name
 
 
-  const h1Breweries = document.createElement('h1')
-  h1Breweries.textContent = "List of Breweries"
-
-  const headerEl = document.createElement('header')
-  headerEl.setAttribute('class', 'search-bar')
-
-  const formSearchBreweries = document.createElement('form')
-  formSearchBreweries.setAttribute('id', 'search-breweries-form')
-  formSearchBreweries.setAttribute('autocomplete', 'off')
-
-  const labelSearchBreweries = document.createElement('label')
-  labelSearchBreweries.setAttribute('for', 'search-breweries')
-  const h2Breweries = document.createElement('h2')
-  h2Breweries.textContent = "Search breweries:"
-  labelSearchBreweries.append(h2Breweries)
+    const divElement = document.createElement('div')
+    divElement.setAttribute('class', 'type')
+    divElement.textContent = brewery.brewery_type
 
 
-  const inputSerchBreweries = document.createElement('input')
-  inputSerchBreweries.setAttribute('id', 'search-breweries')
-  inputSerchBreweries.setAttribute('name', 'search-breweries')
-  inputSerchBreweries.setAttribute('type', 'text')
+    const sectionAddress = document.createElement('section')
+    sectionAddress.setAttribute('class', 'address')
+    const h3Element = document.createElement('h3')
+    h3Element.textContent = "Address:"
 
-  formSearchBreweries.append(labelSearchBreweries, inputSerchBreweries)
+    const p1Address = document.createElement('p')
+    p1Address.textContent = brewery.street
 
-  headerEl.append(formSearchBreweries)
+    const p2Address = document.createElement('p')
+    const strAddress = document.createElement('strong')
+    strAddress.textContent = `${brewery.city}, ${brewery.postal_code}`
+    p2Address.append(strAddress)
+    sectionAddress.append(h3Element, p1Address, p2Address)
 
-  const articleBreweries = document.createElement('article')
-
-  const ulEl = document.createElement('ul')
-  ulEl.setAttribute('class', 'breweries-list')
-
-  const liElement = document.createElement('li')
-
-  const h2Element = document.createElement('h2')
-  h2Element.textContent = "Snow Belt Brew"
-
-
-  const divElement = document.createElement('div')
-  divElement.setAttribute('class', 'type')
-  divElement.textContent = "micro"
+    const sectionPhone = document.createElement('section')
+    sectionPhone.setAttribute('class', 'phone')
+    const h3ElPhone = document.createElement('h3')
+    h3ElPhone.textContent = "Phone:"
+    const pElPhone = document.createElement('p')
+    pElPhone.textContent = brewery.phone
+    sectionPhone.append(h3ElPhone, pElPhone)
 
 
-  const sectionAddress = document.createElement('section')
-  sectionAddress.setAttribute('class', 'address')
-  const h3Element = document.createElement('h3')
-  h3Element.textContent = "Address:"
-
-  const p1Address = document.createElement('p')
-  p1Address.textContent = "9511 Kile Rd"
-
-  const p2Address = document.createElement('p')
-  const strAddress = document.createElement('strong')
-  strAddress.textContent = "Chardon, 44024"
-  p2Address.append(strAddress)
-  sectionAddress.append(h3Element, p1Address, p2Address)
-
-  const sectionPhone = document.createElement('section')
-  sectionPhone.setAttribute('class', 'phone')
-  const h3ElPhone = document.createElement('h3')
-  h3ElPhone.textContent = "Phone:"
-  const pElPhone = document.createElement('p')
-  pElPhone.textContent = "N/A"
-  sectionPhone.append(h3ElPhone, pElPhone)
+    const sectionLink = document.createElement('section')
+    sectionLink.setAttribute('class', 'link')
+    const aElWebsite = document.createElement('a')
+    aElWebsite.setAttribute('href', brewery.website_url)
+    aElWebsite.setAttribute('target', '_blank')
+    aElWebsite.textContent = "Visit Website"
+    sectionLink.append(aElWebsite)
 
 
-  const sectionLink = document.createElement('section')
-  sectionLink.setAttribute('class', 'link')
-  const aElWebsite = document.createElement('a')
-  aElWebsite.setAttribute('href', 'null')
-  aElWebsite.setAttribute('target', '_blank')
-  aElWebsite.textContent = "Visit Website"
-  sectionLink.append(aElWebsite)
+    liElement.append(h2Element, divElement, sectionAddress, sectionPhone, sectionLink)
 
+    ulEl.append(liElement)
+  }
 
-  liElement.append(h2Element, divElement, sectionAddress, sectionPhone, sectionLink)
-
-  ulEl.append(liElement)
-
-  articleBreweries.append(ulEl)
-
-  mainSection.append(h1Breweries, headerEl, articleBreweries)
 }
 
 function render() {
   renderFilterSection()
   renderList()
+  // renderSearchInput()
 }
 
 function init() {
   render()
   listenToSelectStateForm()
+  listenToSearchInput()
 }
 
 init()
